@@ -18,7 +18,6 @@ import (
 	networkaddons "github.com/kubevirt/cluster-network-addons-operator/pkg/apis"
 	hcov1beta1 "github.com/kubevirt/hyperconverged-cluster-operator/pkg/apis/hco/v1beta1"
 	hcoutil "github.com/kubevirt/hyperconverged-cluster-operator/pkg/util"
-	vmimportv1beta1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	openshiftconfigv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +37,6 @@ var (
 		cdiv1beta1.AddToScheme,
 		networkaddons.AddToScheme,
 		sspv1beta1.AddToScheme,
-		vmimportv1beta1.AddToScheme,
 		admissionregistrationv1.AddToScheme,
 		openshiftconfigv1.AddToScheme,
 		kubevirtv1.AddToScheme,

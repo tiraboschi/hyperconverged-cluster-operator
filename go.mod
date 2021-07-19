@@ -15,9 +15,8 @@ require (
 	github.com/google/uuid v1.1.4
 	github.com/imdario/mergo v0.3.12
 	github.com/kubevirt/cluster-network-addons-operator v0.57.0
-	github.com/kubevirt/vm-import-operator v0.3.7
 	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.13.0
+	github.com/onsi/gomega v1.14.0
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/custom-resource-status v0.0.0-20200602122900-c002fd1547ca
 	github.com/operator-framework/api v0.7.1
@@ -27,7 +26,7 @@ require (
 	github.com/prometheus/client_model v0.2.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
-	golang.org/x/tools v0.1.0
+	golang.org/x/tools v0.1.1
 	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1

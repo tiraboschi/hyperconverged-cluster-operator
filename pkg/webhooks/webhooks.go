@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	networkaddonsv1 "github.com/kubevirt/cluster-network-addons-operator/pkg/apis/networkaddonsoperator/v1"
-	vmimportv1beta1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,7 +109,6 @@ func (wh WebhookHandler) ValidateUpdate(requested *v1beta1.HyperConverged, exist
 		kv,
 		cdi,
 		cna,
-		operands.NewVMImportForCR(requested),
 	}
 
 	if wh.isOpenshift {
@@ -184,9 +182,6 @@ func (wh WebhookHandler) updateOperatorCr(ctx context.Context, hc *v1beta1.Hyper
 		required := operands.NewSSP(hc)
 		required.Spec.DeepCopyInto(&existing.Spec)
 
-	case *vmimportv1beta1.VMImportConfig:
-		required := operands.NewVMImportForCR(hc)
-		required.Spec.DeepCopyInto(&existing.Spec)
 	}
 
 	if err = wh.cli.Update(ctx, exists, opts); err != nil {

@@ -55,8 +55,6 @@ var _ = Describe("HyperconvergedController", func() {
 		Context("HCO Lifecycle", func() {
 
 			BeforeEach(func() {
-				_ = os.Setenv("CONVERSION_CONTAINER", commonTestUtils.ConversionImage)
-				_ = os.Setenv("VMWARE_CONTAINER", commonTestUtils.VmwareImage)
 				_ = os.Setenv("VIRTIOWIN_CONTAINER", commonTestUtils.VirtioWinImage)
 				_ = os.Setenv("OPERATOR_NAMESPACE", namespace)
 				_ = os.Setenv(hcoutil.HcoKvIoVersionName, version.Version)
@@ -197,7 +195,6 @@ var _ = Describe("HyperconvergedController", func() {
 				expected.cdi.Status.Conditions = nil
 				expected.cna.Status.Conditions = nil
 				expected.ssp.Status.Conditions = nil
-				expected.vmi.Status.Conditions = nil
 				cl := expected.initClient()
 
 				r := initReconciler(cl, nil)
@@ -551,7 +548,7 @@ var _ = Describe("HyperconvergedController", func() {
 				).To(BeNil())
 
 				Expect(foundResource.Status.RelatedObjects).ToNot(BeNil())
-				Expect(len(foundResource.Status.RelatedObjects)).Should(Equal(14))
+				Expect(len(foundResource.Status.RelatedObjects)).Should(Equal(12))
 				Expect(foundResource.ObjectMeta.Finalizers).Should(Equal([]string{FinalizerName}))
 
 				// Now, delete HCO
@@ -764,8 +761,6 @@ var _ = Describe("HyperconvergedController", func() {
 			)
 
 			BeforeEach(func() {
-				_ = os.Setenv("CONVERSION_CONTAINER", commonTestUtils.ConversionImage)
-				_ = os.Setenv("VMWARE_CONTAINER", commonTestUtils.VmwareImage)
 				_ = os.Setenv("VIRTIOWIN_CONTAINER", commonTestUtils.VirtioWinImage)
 				_ = os.Setenv("OPERATOR_NAMESPACE", namespace)
 				_ = os.Setenv(hcoutil.HcoKvIoVersionName, version.Version)
@@ -822,8 +817,6 @@ var _ = Describe("HyperconvergedController", func() {
 			})
 
 			BeforeEach(func() {
-				_ = os.Setenv("CONVERSION_CONTAINER", commonTestUtils.ConversionImage)
-				_ = os.Setenv("VMWARE_CONTAINER", commonTestUtils.VmwareImage)
 				_ = os.Setenv("VIRTIOWIN_CONTAINER", commonTestUtils.VirtioWinImage)
 				_ = os.Setenv("OPERATOR_NAMESPACE", namespace)
 
@@ -835,9 +828,6 @@ var _ = Describe("HyperconvergedController", func() {
 
 				expected.cna.Status.ObservedVersion = newComponentVersion
 				_ = os.Setenv(hcoutil.CnaoVersionEnvV, newComponentVersion)
-
-				expected.vmi.Status.ObservedVersion = newComponentVersion
-				_ = os.Setenv(hcoutil.VMImportEnvV, newComponentVersion)
 
 				_ = os.Setenv(hcoutil.SspVersionEnvV, newComponentVersion)
 				expected.ssp.Status.ObservedVersion = newComponentVersion
@@ -1078,21 +1068,6 @@ var _ = Describe("HyperconvergedController", func() {
 					},
 					func() {
 						expected.cna.Status.ObservedVersion = newComponentVersion
-					},
-				),
-				Entry(
-					"don't complete upgrade if VM-Import version is not match to the VM-Import version env ver",
-					func() {
-						expected.vmi.Status.ObservedVersion = ""
-						// VM-Import is not ready
-						expected.vmi.Status.Conditions = getGenericProgressingConditions()
-					},
-					func() {
-						// VM-Import is now ready
-						expected.vmi.Status.Conditions = getGenericCompletedConditions()
-					},
-					func() {
-						expected.vmi.Status.ObservedVersion = newComponentVersion
 					},
 				),
 			)
@@ -1563,116 +1538,6 @@ progressTimeout: 150`,
 					Expect(cdi.Spec.Config.PodResourceRequirements).ToNot(BeNil())
 					Expect(*cdi.Spec.Config.PodResourceRequirements).Should(Equal(*testResourceReqs))
 				})
-			})
-
-			Context("Adopt IMS Config on upgrade", func() {
-
-				It("should adopt IMS config into HC CR", func() {
-					expected.hco.Status.UpdateVersion(hcoVersionName, oldVersion)
-
-					vddkInitImageValue := "vddk-init-image-value-to-be-preserved"
-					vddkk := "vddk-init-image"
-
-					expected.imsConfig.Data[vddkk] = vddkInitImageValue
-
-					cl := expected.initClient()
-					foundHC, reconciler, requeue := doReconcile(cl, expected.hco, nil)
-					Expect(requeue).To(BeTrue())
-					checkAvailability(foundHC, metav1.ConditionUnknown)
-
-					By("Check that the spec.VddkInitImage is now populated")
-					Expect(foundHC.Spec.VddkInitImage).ShouldNot(BeNil())
-					Expect(*foundHC.Spec.VddkInitImage).Should(Equal(vddkInitImageValue))
-
-					By("Run reconcile again")
-					expected.hco = foundHC
-					cl = expected.initClient()
-					foundHC, reconciler, requeue = doReconcile(cl, expected.hco, reconciler)
-					Expect(requeue).To(BeTrue())
-					checkAvailability(foundHC, metav1.ConditionTrue)
-
-					By("Check that IMS cm still contains the expected values")
-					vmiCM, err := operands.NewIMSConfigForCR(foundHC, namespace)
-					Expect(err).ToNot(HaveOccurred())
-
-					err = hcoutil.GetRuntimeObject(context.TODO(), cl, vmiCM, log)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(vmiCM.Data).ShouldNot(BeNil())
-					Expect(vmiCM.Data).To(HaveKeyWithValue(vddkk, vddkInitImageValue))
-
-					// call again, make sure this time the requeue is false
-					foundHC, _, requeue = doReconcile(cl, expected.hco, reconciler)
-					Expect(requeue).To(BeFalse())
-					ver, ok := foundHC.Status.GetVersion(hcoVersionName)
-					Expect(ok).To(BeTrue())
-					Expect(ver).Should(Equal(newVersion))
-				})
-
-				It("should ignore IMS value if already exists in HC CR", func() {
-					expected.hco.Status.UpdateVersion(hcoVersionName, oldVersion)
-
-					vddkInitImageValue := "vddk-init-image-value-to-be-overwritten"
-					vddkk := "vddk-init-image"
-
-					expected.imsConfig.Data[vddkk] = vddkInitImageValue
-
-					hcoVddkInitImageValue := "vddk-init-image-value-to-be-preserved"
-					expected.hco.Spec.VddkInitImage = &hcoVddkInitImageValue
-
-					resources := expected.toArray()
-					cl := commonTestUtils.InitClient(resources)
-
-					foundHC, _, requeue := doReconcile(cl, expected.hco, nil)
-					Expect(requeue).To(BeTrue())
-					checkAvailability(foundHC, metav1.ConditionTrue)
-
-					By("Check that the spec.VddkInitImage has not been updated on HCO CR")
-					Expect(foundHC.Spec.VddkInitImage).ShouldNot(BeNil())
-					Expect(*foundHC.Spec.VddkInitImage).Should(Equal(hcoVddkInitImageValue))
-					Expect(*foundHC.Spec.VddkInitImage).Should(Not(Equal(vddkInitImageValue)))
-
-					By("Check that IMS CM value is now the same as HCO's")
-					vmiCM, err := operands.NewIMSConfigForCR(foundHC, namespace)
-					Expect(err).ToNot(HaveOccurred())
-
-					err = hcoutil.GetRuntimeObject(context.TODO(), cl, vmiCM, log)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(vmiCM.Data).ShouldNot(BeNil())
-					Expect(vmiCM.Data).To(HaveKeyWithValue(vddkk, hcoVddkInitImageValue))
-
-				})
-
-				It("TODO: should ignore IMS config into HC CR if there is no change", func() {
-					expected.hco.Status.UpdateVersion(hcoVersionName, oldVersion)
-
-					vddkInitImageValue := "vddk-init-image-value-to-be-preserved"
-					vddkk := "vddk-init-image"
-
-					expected.imsConfig.Data[vddkk] = vddkInitImageValue
-
-					expected.hco.Spec.VddkInitImage = &vddkInitImageValue
-
-					resources := expected.toArray()
-					cl := commonTestUtils.InitClient(resources)
-
-					foundHC, _, requeue := doReconcile(cl, expected.hco, nil)
-					Expect(requeue).To(BeTrue())
-					checkAvailability(foundHC, metav1.ConditionTrue)
-
-					By("Check that the spec.VddkInitImage has not been updated on HCO CR")
-					Expect(foundHC.Spec.VddkInitImage).ShouldNot(BeNil())
-					Expect(*foundHC.Spec.VddkInitImage).Should(Equal(vddkInitImageValue))
-
-					By("Check that IMS CM value is still the same as HCO's")
-					vmiCM, err := operands.NewIMSConfigForCR(foundHC, namespace)
-					Expect(err).ToNot(HaveOccurred())
-
-					err = hcoutil.GetRuntimeObject(context.TODO(), cl, vmiCM, log)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(vmiCM.Data).ShouldNot(BeNil())
-					Expect(vmiCM.Data).To(HaveKeyWithValue(vddkk, vddkInitImageValue))
-				})
-
 			})
 
 		})

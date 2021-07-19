@@ -79,11 +79,8 @@ var (
 	cdiCsv              = flag.String("cdi-csv", "", "Containerized Data Importer CSV String")
 	nmoCsv              = flag.String("nmo-csv", "", "Node Maintenance Operator CSV String")
 	hppCsv              = flag.String("hpp-csv", "", "HostPath Provisioner Operator CSV String")
-	vmImportCsv         = flag.String("vmimport-csv", "", "Virtual Machine Import Operator CSV String")
 	operatorImage       = flag.String("operator-image-name", "", "HyperConverged Cluster Operator image")
 	webhookImage        = flag.String("webhook-image-name", "", "HyperConverged Cluster Webhook image")
-	imsConversionImage  = flag.String("ims-conversion-image-name", "", "IMS conversion image")
-	imsVMWareImage      = flag.String("ims-vmware-image-name", "", "IMS VMWare image")
 	kvVirtIOWinImage    = flag.String("kv-virtiowin-image-name", "", "KubeVirt VirtIO Win image")
 	smbios              = flag.String("smbios", "", "Custom SMBIOS string for KubeVirt ConfigMap")
 	machinetype         = flag.String("machinetype", "", "Custom MACHINETYPE string for KubeVirt ConfigMap")
@@ -108,7 +105,6 @@ var (
 	sspVersion                    = flag.String("ssp-version", "", "SSP operator version")
 	nmoVersion                    = flag.String("nmo-version", "", "NM operator version")
 	hppoVersion                   = flag.String("hppo-version", "", "HPP operator version")
-	vmImportVersion               = flag.String("vm-import-version", "", "VM-Import operator version")
 	apiSources                    = flag.String("api-sources", cwd+"/...", "Project sources")
 	enableUniqueSemver            = flag.Bool("enable-unique-version", false, "Insert a skipRange annotation to support unique semver in the CSV")
 	envVars                       EnvVarFlags
@@ -117,14 +113,6 @@ var (
 func genHcoCrds() error {
 	// Write out CRDs and CR
 	if err := util.MarshallObject(components.GetOperatorCRD(*apiSources), os.Stdout); err != nil {
-		return err
-	}
-
-	if err := util.MarshallObject(components.GetV2VCRD(), os.Stdout); err != nil {
-		return err
-	}
-
-	if err := util.MarshallObject(components.GetV2VOvirtProviderCRD(), os.Stdout); err != nil {
 		return err
 	}
 
@@ -446,10 +434,6 @@ func getInitialCsvList() []util.CsvWithComponent {
 			Csv:       *hppCsv,
 			Component: hcoutil.AppComponentStorage,
 		},
-		{
-			Csv:       *vmImportCsv,
-			Component: hcoutil.AppComponentImport,
-		},
 	}
 }
 
@@ -487,24 +471,21 @@ func getCsvBaseParams(replaces string, version semver.Version) *components.CSVBa
 
 func getDeploymentParams() *components.DeploymentOperatorParams {
 	return &components.DeploymentOperatorParams{
-		Namespace:           *namespace,
-		Image:               *operatorImage,
-		WebhookImage:        *webhookImage,
-		ImagePullPolicy:     "IfNotPresent",
-		ConversionContainer: *imsConversionImage,
-		VmwareContainer:     *imsVMWareImage,
-		VirtIOWinContainer:  *kvVirtIOWinImage,
-		Smbios:              *smbios,
-		Machinetype:         *machinetype,
-		HcoKvIoVersion:      *hcoKvIoVersion,
-		KubevirtVersion:     *kubevirtVersion,
-		CdiVersion:          *cdiVersion,
-		CnaoVersion:         *cnaoVersion,
-		SspVersion:          *sspVersion,
-		NmoVersion:          *nmoVersion,
-		HppoVersion:         *hppoVersion,
-		VMImportVersion:     *vmImportVersion,
-		Env:                 envVars,
+		Namespace:          *namespace,
+		Image:              *operatorImage,
+		WebhookImage:       *webhookImage,
+		ImagePullPolicy:    "IfNotPresent",
+		VirtIOWinContainer: *kvVirtIOWinImage,
+		Smbios:             *smbios,
+		Machinetype:        *machinetype,
+		HcoKvIoVersion:     *hcoKvIoVersion,
+		KubevirtVersion:    *kubevirtVersion,
+		CdiVersion:         *cdiVersion,
+		CnaoVersion:        *cnaoVersion,
+		SspVersion:         *sspVersion,
+		NmoVersion:         *nmoVersion,
+		HppoVersion:        *hppoVersion,
+		Env:                envVars,
 	}
 }
 

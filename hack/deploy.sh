@@ -170,7 +170,6 @@ OPERATORS=(
     "cdi-operator"
     "cluster-network-addons-operator"
     "node-maintenance-operator"
-    "vm-import-operator"
 )
 
 if [ "$ENABLE_SSP" = "true" ]; then
