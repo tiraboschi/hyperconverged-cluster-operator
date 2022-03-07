@@ -62,7 +62,6 @@ var _ = Describe("[rfe_id:4356][crit:medium][vendor:cnv-qe@redhat.com][level:sys
 				"bridge-marker": false,
 				"cni-plugins":   false,
 				//"kube-multus":     false,
-				"nmstate-handler": false,
 				"ovs-cni-marker":  false,
 				"virt-handler":    false,
 			}
@@ -91,7 +90,6 @@ var _ = Describe("[rfe_id:4356][crit:medium][vendor:cnv-qe@redhat.com][level:sys
 				"cdi-controller":  false,
 				"cdi-uploadproxy": false,
 				"manager":         false,
-				"nmstate-webhook": false,
 				"virt-api":        false,
 				"virt-controller": false,
 			}
