@@ -750,6 +750,23 @@ Please correctly consider the implications of this option before setting it.
 
 `BlockUninstallIfWorkloadsExist` is the default behaviour.
 
+
+## Cluster level EvictionStrategy
+
+`UninstallStrategy` defines how to proceed on uninstall when workloads (VirtualMachines, DataVolumes) still exist:
+
+`EvictionStrategy` defines at the cluster level if the VirtualMachineInstance should be
+migrated instead of shut-off in case of a node drain. If the VirtualMachineInstance specific
+field is set it overrides the cluster level one.
+Possible values:
+
+- `EvictionStrategyNone` no eviction strategy at cluster level.
+- `EvictionStrategyLiveMigrate` ???
+- `EvictionStrategyExternal` ???
+
+`EvictionStrategyLiveMigrate` is the default behaviour.
+
+
 ## Hyperconverged Kubevirt cluster-wide Crypto Policy API
 
 Starting from OCP/OKD 4.6, a [cluster-wide API](https://github.com/openshift/enhancements/blob/master/enhancements/kube-apiserver/tls-config.md) is available for cluster administrators to set TLS profiles for OCP/OKD core components.

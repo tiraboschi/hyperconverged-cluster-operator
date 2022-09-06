@@ -151,6 +151,14 @@ type HyperConvergedSpec struct {
 	// be deployed.
 	// +optional
 	TektonPipelinesNamespace *string `json:"tektonPipelinesNamespace,omitempty"`
+
+	// EvictionStrategy defines at the cluster level if the VirtualMachineInstance should be
+	// migrated instead of shut-off in case of a node drain. If the VirtualMachineInstance specific
+	// field is set it overrides the cluster level one.
+	// +kubebuilder:default=EvictionStrategyLiveMigrate
+	// +kubebuilder:validation:Enum=EvictionStrategyNone;EvictionStrategyLiveMigrate;EvictionStrategyExternal
+	// +optional
+	EvictionStrategy *v1.EvictionStrategy `json:"evictionStrategy,omitempty"`
 }
 
 // CertRotateConfigCA contains the tunables for TLS certificates.
@@ -523,7 +531,7 @@ type HyperConverged struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={"certConfig": {"ca": {"duration": "48h0m0s", "renewBefore": "24h0m0s"}, "server": {"duration": "24h0m0s", "renewBefore": "12h0m0s"}}, "featureGates": {"withHostPassthroughCPU": false, "enableCommonBootImageImport": true, "deployTektonTaskResources": false, "nonRoot": true}, "liveMigrationConfig": {"completionTimeoutPerGiB": 800, "parallelMigrationsPerCluster": 5, "parallelOutboundMigrationsPerNode": 2, "progressTimeout": 150}, "uninstallStrategy": "BlockUninstallIfWorkloadsExist"}
+	// +kubebuilder:default={"certConfig": {"ca": {"duration": "48h0m0s", "renewBefore": "24h0m0s"}, "server": {"duration": "24h0m0s", "renewBefore": "12h0m0s"}}, "evictionStrategy": "EvictionStrategyLiveMigrate", "featureGates": {"withHostPassthroughCPU": false, "enableCommonBootImageImport": true, "deployTektonTaskResources": false, "nonRoot": true}, "liveMigrationConfig": {"completionTimeoutPerGiB": 800, "parallelMigrationsPerCluster": 5, "parallelOutboundMigrationsPerNode": 2, "progressTimeout": 150}, "uninstallStrategy": "BlockUninstallIfWorkloadsExist"}
 	// +optional
 	Spec   HyperConvergedSpec   `json:"spec,omitempty"`
 	Status HyperConvergedStatus `json:"status,omitempty"`
