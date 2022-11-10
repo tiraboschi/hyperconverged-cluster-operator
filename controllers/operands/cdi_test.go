@@ -1139,6 +1139,82 @@ var _ = Describe("CDI Operand", func() {
 				Expect(*cdi.Spec.CloneStrategyOverride).Should(BeEquivalentTo("copy"))
 			})
 
+			It("Ensure func should update CDI object with changes from the annotation on tlsSecurityProfile - replace", func() {
+				existsCdi, err := NewCDI(hco)
+				Expect(err).ToNot(HaveOccurred())
+
+				hco.Annotations = map[string]string{common.JSONPatchCDIAnnotationName: `[
+					{
+						"op": "replace",
+						"path": "/spec/config/tlsSecurityProfile",
+						"value": {"old":{}, "type": "Old"}
+					}
+				]`}
+
+				cl := commonTestUtils.InitClient([]runtime.Object{hco, existsCdi})
+
+				handler := (*genericOperand)(newCdiHandler(cl, commonTestUtils.GetScheme()))
+				res := handler.ensure(req)
+				Expect(res.Err).ToNot(HaveOccurred())
+				Expect(res.Updated).To(BeTrue())
+				Expect(res.UpgradeDone).To(BeFalse())
+
+				cdi := &cdiv1beta1.CDI{}
+
+				expectedResource := NewCDIWithNameOnly(hco)
+				Expect(
+					cl.Get(context.TODO(),
+						types.NamespacedName{Name: expectedResource.Name, Namespace: expectedResource.Namespace},
+						cdi),
+				).ToNot(HaveOccurred())
+
+				Expect(cdi.Spec.Config.TLSSecurityProfile.Type).Should(BeEquivalentTo("Old"))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Old", BeEquivalentTo(&openshiftconfigv1.OldTLSProfile{})))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Modern", BeNil()))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).ShouldNot(HaveField("Intermediate", BeNil()))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Intermediate", BeEquivalentTo(&openshiftconfigv1.IntermediateTLSProfile{})))
+			})
+
+			It("Ensure func should update CDI object with changes from the annotation on tlsSecurityProfile - remove & add", func() {
+				existsCdi, err := NewCDI(hco)
+				Expect(err).ToNot(HaveOccurred())
+
+				hco.Annotations = map[string]string{common.JSONPatchCDIAnnotationName: `[
+					{
+						"op": "remove",
+						"path": "/spec/config/tlsSecurityProfile/intermediate"
+					},
+					{
+						"op": "add",
+						"path": "/spec/config/tlsSecurityProfile",
+						"value": {"old":{}, "type": "Old"}
+					}
+				]`}
+
+				cl := commonTestUtils.InitClient([]runtime.Object{hco, existsCdi})
+
+				handler := (*genericOperand)(newCdiHandler(cl, commonTestUtils.GetScheme()))
+				res := handler.ensure(req)
+				Expect(res.Err).ToNot(HaveOccurred())
+				Expect(res.Updated).To(BeTrue())
+				Expect(res.UpgradeDone).To(BeFalse())
+
+				cdi := &cdiv1beta1.CDI{}
+
+				expectedResource := NewCDIWithNameOnly(hco)
+				Expect(
+					cl.Get(context.TODO(),
+						types.NamespacedName{Name: expectedResource.Name, Namespace: expectedResource.Namespace},
+						cdi),
+				).ToNot(HaveOccurred())
+
+				Expect(cdi.Spec.Config.TLSSecurityProfile.Type).Should(BeEquivalentTo("Old"))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Old", BeEquivalentTo(&openshiftconfigv1.OldTLSProfile{})))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Modern", BeNil()))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).Should(HaveField("Intermediate", BeNil()))
+				Expect(cdi.Spec.Config.TLSSecurityProfile).ShouldNot(HaveField("Intermediate", BeEquivalentTo(&openshiftconfigv1.IntermediateTLSProfile{})))
+			})
+
 			It("Ensure func should fail to update CDI object with wrong jsonPatch", func() {
 				existsCdi, err := NewCDI(hco)
 				Expect(err).ToNot(HaveOccurred())
