@@ -229,6 +229,17 @@ echo "waiting for testing infrastructure to be ready"
 ${CMD} wait deployment cdi-http-import-server -n "${INSTALLED_NAMESPACE}" --for condition=Available --timeout=10m
 ${CMD} wait pods -l "kubevirt.io=disks-images-provider" -n "${INSTALLED_NAMESPACE}" --for condition=Ready --timeout=10m
 
+##########
+# Kubevirt tests are now (see: https://github.com/kubevirt/kubevirt/pull/9072 ) assuming
+# that virtctl is going to work in namespace named default if not specified
+# while this depends on the current-context
+# so let's alter the current context to set default as the default namespace
+# and restore the initial value after the test
+# please remove this hack once https://github.com/kubevirt/kubevirt/pull/9683
+# is properly consumed
+CURRENT_D_NS=$(${CMD} config view -o jsonpath="{.contexts[?(@.name == \"$(${CMD} config current-context)\")].context.namespace}")
+${CMD} config set-context --current --namespace=default
+
 echo "starting tests"
 ${TESTS_BINARY} \
     -cdi-namespace="$INSTALLED_NAMESPACE" \
@@ -249,3 +260,9 @@ ${TESTS_BINARY} \
     -test.timeout=3h \
     -ginkgo.timeout=3h \
     -artifacts=${ARTIFACT_DIR}/kubevirt_dump
+
+##########
+# please remove this hack once https://github.com/kubevirt/kubevirt/pull/9683
+# is properly consumed
+${CMD} config set-context --current --namespace=${CURRENT_D_NS}
+##########
