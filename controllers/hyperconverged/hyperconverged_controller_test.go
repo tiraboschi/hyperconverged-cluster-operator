@@ -2624,7 +2624,7 @@ var _ = Describe("HyperconvergedController", func() {
 
 					toBeRemovedRelatedObjects := []corev1.ObjectReference{
 						{
-							APIVersion:      "v1alpha1",
+							APIVersion:      "tektontasks.kubevirt.io/v1alpha1",
 							Kind:            "TektonTasks",
 							Name:            "tto-kubevirt-hyperconverged",
 							Namespace:       "kubevirt-hyperconverged",
@@ -2653,6 +2653,15 @@ var _ = Describe("HyperconvergedController", func() {
 					resources := append(expected.toArray(), crdToBeRemoved, cmNotToBeRemoved)
 
 					cl := commonTestUtils.InitClient(resources)
+					restMapper := cl.RESTMapper()
+					Expect(restMapper).To(Not(BeNil()))
+					dRestMapper := restMapper.(*apimetav1.DefaultRESTMapper)
+					dRestMapper.AddSpecific(
+						schema.GroupVersionKind{Group: "tektontasks.kubevirt.io", Version: "v1alpha1", Kind: "TektonTasks"},
+						schema.GroupVersionResource{Group: "tektontasks.kubevirt.io", Version: "v1alpha1", Resource: "tektontasks"},
+						schema.GroupVersionResource{Group: "tektontasks.kubevirt.io", Version: "v1alpha1", Resource: "tektontask"},
+						apimetav1.RESTScopeNamespace)
+
 					foundResource, reconciler, requeue := doReconcile(cl, expected.hco, nil)
 					Expect(requeue).To(BeTrue())
 					checkAvailability(foundResource, metav1.ConditionTrue)

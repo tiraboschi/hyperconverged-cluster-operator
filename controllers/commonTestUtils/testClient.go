@@ -121,7 +121,7 @@ func (c *HcoTestClient) Scheme() *runtime.Scheme {
 }
 
 func (c *HcoTestClient) RESTMapper() meta.RESTMapper {
-	return nil
+	return c.client.RESTMapper()
 }
 
 type HcoTestStatusWriter struct {
