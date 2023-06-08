@@ -2,6 +2,7 @@ package operands
 
 import (
 	"context"
+	"k8s.io/utils/pointer"
 	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -257,12 +258,11 @@ var _ = Describe("Kubevirt Console Plugin", func() {
 			Expect(hco.Status.RelatedObjects).To(ContainElement(*objectRef))
 		})
 
-		It("should reconcile deployment to default if changed", func() {
+		It("should reconcile deployment to default if changed - (updatable fields)", func() {
 			expectedResource, _ := NewKvUIPluginDeplymnt(hco)
 			outdatedResource, _ := NewKvUIPluginDeplymnt(hco)
 
-			outdatedResource.ObjectMeta.Labels[hcoutil.AppLabel] = "wrong label"
-			outdatedResource.Spec.Template.Spec.Containers[0].Image = "quay.io/fake/image:latest"
+			outdatedResource.Spec.Replicas = pointer.Int32(123)
 
 			cl := commontestutils.InitClient([]client.Object{hco, outdatedResource})
 			handler, err := newKvUIPluginDeploymentHandler(logger, cl, commontestutils.GetScheme(), hco)
@@ -279,8 +279,43 @@ var _ = Describe("Kubevirt Console Plugin", func() {
 					foundResource),
 			).ToNot(HaveOccurred())
 
-			Expect(foundResource.ObjectMeta.Labels).ToNot(Equal(outdatedResource.ObjectMeta.Labels))
-			Expect(foundResource.ObjectMeta.Labels).To(Equal(expectedResource.ObjectMeta.Labels))
+			Expect(foundResource.Spec.Replicas).ToNot(Equal(outdatedResource.Spec.Replicas))
+			Expect(foundResource.Spec.Replicas).To(Equal(expectedResource.Spec.Replicas))
+			Expect(reflect.DeepEqual(expectedResource.Spec, foundResource.Spec)).To(BeTrue())
+
+			// ObjectReference should have been updated
+			Expect(hco.Status.RelatedObjects).To(Not(BeNil()))
+			objectRefOutdated, err := reference.GetReference(commontestutils.GetScheme(), outdatedResource)
+			Expect(err).ToNot(HaveOccurred())
+			objectRefFound, err := reference.GetReference(commontestutils.GetScheme(), foundResource)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hco.Status.RelatedObjects).To(Not(ContainElement(*objectRefOutdated)))
+			Expect(hco.Status.RelatedObjects).To(ContainElement(*objectRefFound))
+		})
+
+		It("should reconcile deployment to default if changed - (immutable fields)", func() {
+			expectedResource, _ := NewKvUIPluginDeplymnt(hco)
+			outdatedResource, _ := NewKvUIPluginDeplymnt(hco)
+
+			outdatedResource.Spec.Replicas = pointer.Int32(123)
+
+			cl := commontestutils.InitClient([]client.Object{hco, outdatedResource})
+			handler, err := newKvUIPluginDeploymentHandler(logger, cl, commontestutils.GetScheme(), hco)
+			Expect(err).ToNot(HaveOccurred())
+			res := handler[0].ensure(req)
+			Expect(res.UpgradeDone).To(BeFalse())
+			Expect(res.Updated).To(BeTrue())
+			Expect(res.Err).ToNot(HaveOccurred())
+
+			foundResource := &appsv1.Deployment{}
+			Expect(
+				cl.Get(context.TODO(),
+					types.NamespacedName{Name: expectedResource.Name, Namespace: expectedResource.Namespace},
+					foundResource),
+			).ToNot(HaveOccurred())
+
+			Expect(foundResource.Spec.Replicas).ToNot(Equal(outdatedResource.Spec.Replicas))
+			Expect(foundResource.Spec.Replicas).To(Equal(expectedResource.Spec.Replicas))
 			Expect(reflect.DeepEqual(expectedResource.Spec, foundResource.Spec)).To(BeTrue())
 
 			// ObjectReference should have been updated
