@@ -10,6 +10,7 @@ spec:
         kubevirt.io/size: small
         kubevirt.io/domain: testvm
     spec:
+      architecture: amd64
       domain:
         devices:
           disks:
@@ -22,16 +23,18 @@ spec:
           interfaces:
           - name: default
             masquerade: {}
+        machine:
+          type: q35
         resources:
           requests:
-            memory: 64M
+            memory: 96Mi
       networks:
       - name: default
         pod: {}
       volumes:
         - name: containerdisk
           containerDisk:
-            image: quay.io/kubevirt/cirros-container-disk-demo
+            image: quay.io/kubevirt/cirros-container-disk-demo:v1.0.1
         - name: cloudinitdisk
           cloudInitNoCloud:
             secretRef:
