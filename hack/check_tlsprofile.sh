@@ -127,6 +127,17 @@ clean_nmap_output custom.txt
 diff -w custom.txt "hack/tlsprofiles/custom.expected${FIPS}"
 check_ssp_up
 
+# Custom TLS 1.3 only with post-quantum hybrid (X25519MLKEM768) preferred + X25519 fallback.
+# nmap does not support X25519MLKEM768 in its supported_groups so it negotiates X25519.
+# A PQC-capable client would negotiate X25519MLKEM768 as preferred.
+# Full PQC group verification requires openshift/tls-scanner or a Go TLS client test
+# (tracked in docs/tls-groups-support-gaps.md).
+./hack/retry.sh 10 3 "${KUBECTL_BINARY} patch ${HCO_TYPE} -n ${INSTALLED_NAMESPACE} --type=json kubevirt-hyperconverged -p '[{\"op\": \"replace\", \"path\": \"${TLS_PATH}\", \"value\": {custom: {minTLSVersion: \"VersionTLS13\", ciphers: [\"TLS_AES_128_GCM_SHA256\", \"TLS_AES_256_GCM_SHA384\", \"TLS_CHACHA20_POLY1305_SHA256\"], groups: [\"X25519MLKEM768\", \"X25519\"]}, type: \"Custom\"} }]'"
+run_nmap custom-pqc.txt
+clean_nmap_output custom-pqc.txt
+diff -w custom-pqc.txt "hack/tlsprofiles/custom-pqc.expected${FIPS}"
+check_ssp_up
+
 ./hack/retry.sh 10 3 "${KUBECTL_BINARY} patch ${HCO_TYPE} -n ${INSTALLED_NAMESPACE} --type=json kubevirt-hyperconverged -p '[{\"op\": \"remove\", \"path\": \"${TLS_PATH}\" }]'"
 sleep 2
 run_nmap default.txt
